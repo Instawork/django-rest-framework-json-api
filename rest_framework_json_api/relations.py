@@ -229,3 +229,14 @@ class SerializerMethodResourceRelatedField(ResourceRelatedField):
             base = super(SerializerMethodResourceRelatedField, self)
             return [base.to_representation(x) for x in value]
         return super(SerializerMethodResourceRelatedField, self).to_representation(value)
+
+    def get_links(self, obj=None, lookup_field='pk'):
+        if hasattr(self, 'child_relation') and getattr(self, 'child_relation'):
+            return super(SerializerMethodResourceRelatedField, self).get_links(obj, lookup_field)
+
+        if self.source and hasattr(self.parent, self.source):
+            serializer_method = getattr(self.parent, self.source)
+            if hasattr(serializer_method, '__call__'):
+                obj = serializer_method(obj)
+
+        return super(SerializerMethodResourceRelatedField, self).get_links(obj, lookup_field)
