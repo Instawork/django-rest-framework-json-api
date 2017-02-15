@@ -106,9 +106,12 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         self_link = self.get_url('self', self.self_link_view_name, self_kwargs, request)
 
         related_id = getattr(obj, self.related_link_lookup_field) if obj else view.kwargs[self.related_link_lookup_field]
-        related_kwargs = {self.related_link_url_kwarg: related_id}
+        if related_id:
+            related_kwargs = {self.related_link_url_kwarg: related_id}
 
-        related_link = self.get_url('related', self.related_link_view_name, related_kwargs, request)
+            related_link = self.get_url('related', self.related_link_view_name, related_kwargs, request)
+        else:
+            related_link = None
 
         if self_link:
             return_data.update({'self': self_link})
