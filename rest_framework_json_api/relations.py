@@ -99,7 +99,12 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         view = self.context.get('view', None)
         return_data = OrderedDict()
 
-        kwargs = {lookup_field: getattr(obj, lookup_field) if obj else view.kwargs[lookup_field]}
+        if obj:
+            kwargs = {lookup_field: getattr(obj, lookup_field)}
+        elif lookup_field in view.kwargs:
+            kwargs = {lookup_field: view.kwargs[lookup_field]}
+        else:
+            kwargs = {}
 
         self_kwargs = kwargs.copy()
         self_kwargs.update({'related_field': self.field_name if self.field_name else self.parent.field_name})
