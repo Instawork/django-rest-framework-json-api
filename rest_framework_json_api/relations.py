@@ -150,7 +150,11 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         # check to see if this resource has a different resource_name when
         # included and use that name
         resource_type = None
-        root = getattr(self.parent, 'parent', self.parent)
+
+        root = getattr(self.parent, 'parent', None)
+        if root is None:
+            root = self.parent
+
         field_name = self.field_name if self.field_name else self.parent.field_name
         if getattr(root, 'included_serializers', None) is not None:
             includes = get_included_serializers(root)
