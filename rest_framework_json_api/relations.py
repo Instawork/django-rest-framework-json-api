@@ -110,7 +110,13 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         self_kwargs.update({'related_field': self.field_name if self.field_name else self.parent.field_name})
         self_link = self.get_url('self', self.self_link_view_name, self_kwargs, request)
 
-        related_id = getattr(obj, self.related_link_lookup_field) if obj else view.kwargs[self.related_link_lookup_field]
+        if obj:
+            related_id = getattr(obj, self.related_link_lookup_field)
+        elif self.related_link_lookup_field in view.kwargs:
+            related_id = view.kwargs[self.related_link_lookup_field]
+        else:
+            related_id = None
+
         if related_id:
             related_kwargs = {self.related_link_url_kwarg: related_id}
 
