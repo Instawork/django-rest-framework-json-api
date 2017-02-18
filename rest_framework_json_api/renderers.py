@@ -122,9 +122,10 @@ class JSONRenderer(renderers.JSONRenderer):
                     continue
 
                 # special case for ResourceRelatedField
-                relation_data = {
-                    'data': resource.get(field_name)
-                }
+                relation_data = {}
+                field_data = resource.get(field_name)
+                if field_data:
+                    relation_data['data'] = field_data
 
                 field_links = field.get_links(resource_instance)
                 relation_data.update(
