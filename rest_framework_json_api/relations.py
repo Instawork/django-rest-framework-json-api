@@ -35,7 +35,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         if related_link_view_name is not None:
             self.related_link_view_name = related_link_view_name
 
-        self.related_link_lookup_field = kwargs.pop('related_link_lookup_field', self.related_link_lookup_field)
+        self.related_link_lookup_field = kwargs.pop('related_link_lookup_field', None)
         self.related_link_url_kwarg = kwargs.pop('related_link_url_kwarg', self.related_link_lookup_field)
 
         # check for a model class that was passed in for the relation type
@@ -111,7 +111,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         self_link = self.get_url('self', self.self_link_view_name, self_kwargs, request)
 
         if obj:
-            related_id = getattr(obj, self.related_link_lookup_field)
+            related_id = getattr(obj, self.related_link_lookup_field or 'pk')
         elif self.related_link_lookup_field in view.kwargs:
             related_id = view.kwargs[self.related_link_lookup_field]
         else:
