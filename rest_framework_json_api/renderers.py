@@ -83,6 +83,9 @@ class JSONRenderer(renderers.JSONRenderer):
             if field_name == api_settings.URL_FIELD_NAME:
                 continue
 
+            if field.write_only:
+                continue
+
             # Skip fields without relations
             if not isinstance(field, (relations.RelatedField, relations.ManyRelatedField, BaseSerializer)):
                 continue
