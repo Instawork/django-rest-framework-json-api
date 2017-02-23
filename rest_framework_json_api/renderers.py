@@ -248,6 +248,8 @@ class JSONRenderer(renderers.JSONRenderer):
 
     @classmethod
     def extract_included(cls, fields, resource, resource_instance, included_resources):
+        # Avoid circular deps
+        from rest_framework_json_api.relations import ResourceRelatedField, SerializerMethodResourceRelatedField
         # this function may be called with an empty record (example: Browsable Interface)
         if not resource_instance:
             return
@@ -277,16 +279,23 @@ class JSONRenderer(renderers.JSONRenderer):
                     continue
 
             try:
-                relation_instance = getattr(resource_instance, field_name)
+                if isinstance(field, SerializerMethodResourceRelatedField):
+                    serializer_method = getattr(current_serializer, field.source)
+                    relation_instance = serializer_method(resource_instance)
+                elif isinstance(field, ResourceRelatedField):
+                    resource_instance_source = getattr(resource_instance, field.source)
+                    if callable(resource_instance_source):
+                        relation_instance = resource_instance_source()
+                    else:
+                        relation_instance = resource_instance_source
+                else:
+                    relation_instance = getattr(resource_instance, field_name)
             except AttributeError:
                 try:
                     # For ManyRelatedFields if `related_name` is not set we need to access `foo_set` from `source`
                     relation_instance = getattr(resource_instance, field.child_relation.source)
                 except AttributeError:
-                    if not hasattr(current_serializer, field.source):
-                        continue
-                    serializer_method = getattr(current_serializer, field.source)
-                    relation_instance = serializer_method(resource_instance)
+                    continue
 
             if isinstance(relation_instance, Manager):
                 relation_instance = relation_instance.all()
