@@ -18,6 +18,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
     self_link_view_name = None
     related_link_view_name = None
     related_link_lookup_field = 'pk'
+    links_only = False
 
     default_error_messages = {
         'required': _('This field is required.'),
@@ -37,6 +38,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
 
         self.related_link_lookup_field = kwargs.pop('related_link_lookup_field', None)
         self.related_link_url_kwarg = kwargs.pop('related_link_url_kwarg', self.related_link_lookup_field)
+        self.links_only = kwargs.pop('links_only', self.links_only)
 
         # check for a model class that was passed in for the relation type
         model = kwargs.pop('model', None)
@@ -153,6 +155,9 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         return super(ResourceRelatedField, self).to_internal_value(data['id'])
 
     def to_representation(self, value):
+        if self.links_only:
+            return None
+
         if getattr(self, 'pk_field', None) is not None:
             pk = self.pk_field.to_representation(value.pk)
         else:
