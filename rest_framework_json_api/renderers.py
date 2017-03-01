@@ -91,7 +91,11 @@ class JSONRenderer(renderers.JSONRenderer):
                 continue
 
             source = field.source
-            relation_type = utils.get_related_resource_type(field)
+            # Pretty big hack, we don't actually care about the relation type in the case of ManyRelatedField
+            try:
+                relation_type = utils.get_related_resource_type(field)
+            except:
+                relation_type = None
 
             if isinstance(field, relations.HyperlinkedIdentityField):
                 resolved, relation_instance = utils.get_relation_instance(resource_instance, source, field.parent)
