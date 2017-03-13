@@ -83,20 +83,28 @@ class JSONParser(parsers.JSONParser):
 
         # Check for inconsistencies
         resource_name = utils.get_resource_name(parser_context)
-        if data.get('type') != resource_name and request.method in ('PUT', 'POST', 'PATCH'):
-            raise exceptions.Conflict(
-                "The resource object's type ({data_type}) is not the type "
-                "that constitute the collection represented by the endpoint ({resource_type}).".format(
-                    data_type=data.get('type'),
-                    resource_type=resource_name
+        parsed_data = []
+        if not isinstance(data, list):
+            data = [data]
+        for datum in data:
+            if datum.get('type') != resource_name and request.method in ('PUT', 'POST', 'PATCH'):
+                raise exceptions.Conflict(
+                    "The resource object's type ({data_type}) is not the type "
+                    "that constitute the collection represented by the endpoint ({resource_type}).".format(
+                        data_type=datum.get('type'),
+                        resource_type=resource_name
+                    )
                 )
-            )
-        if not data.get('id') and request.method in ('PATCH', 'PUT'):
-            raise ParseError("The resource identifier object must contain an 'id' member")
+            if not datum.get('id') and request.method in ('PATCH', 'PUT'):
+                raise ParseError("The resource identifier object must contain an 'id' member")
 
-        # Construct the return data
-        parsed_data = {'id': data.get('id')} if 'id' in data else {}
-        parsed_data.update(self.parse_attributes(data))
-        parsed_data.update(self.parse_relationships(data))
-        parsed_data.update(self.parse_metadata(result))
+            # Construct the return data
+            parsed_datum = {'id': datum.get('id')} if 'id' in datum else {}
+            parsed_datum.update(self.parse_attributes(datum))
+            parsed_datum.update(self.parse_relationships(datum))
+            parsed_datum.update(self.parse_metadata(result))
+            parsed_data.append(parsed_datum)
+
+        if len(parsed_data) == 1:
+            return parsed_data[0]
         return parsed_data
