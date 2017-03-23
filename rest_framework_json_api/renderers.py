@@ -131,7 +131,7 @@ class JSONRenderer(renderers.JSONRenderer):
                 # special case for ResourceRelatedField
                 relation_data = {}
                 field_data = resource.get(field_name)
-                if field_data:
+                if field_data or type(field_data) == list:
                     relation_data['data'] = field_data
 
                 field_links = field.get_links(resource_instance)
