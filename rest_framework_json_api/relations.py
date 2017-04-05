@@ -179,7 +179,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
 
         if root is not None:
             includes = get_included_serializers(root)
-            if field_name in includes:
+            if field_name in includes.keys():
                 return get_resource_type_from_serializer(includes[field_name])
 
         return None
