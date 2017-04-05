@@ -167,10 +167,6 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         if resource_type is None:
             resource_type = get_resource_type_from_instance(value)
 
-        root = getattr(self.parent, 'parent', None)
-        if root is None:
-            root = self.parent
-
         return OrderedDict([('type', resource_type), ('id', str(pk))])
 
     def get_resource_type_from_included_serializer(self):
