@@ -163,22 +163,40 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         else:
             pk = value.pk
 
-        # check to see if this resource has a different resource_name when
-        # included and use that name
-        resource_type = None
+        resource_type = self.get_resource_type_from_included_serializer()
+        if resource_type is None:
+            resource_type = get_resource_type_from_instance(value)
 
         root = getattr(self.parent, 'parent', None)
         if root is None:
             root = self.parent
 
-        field_name = self.field_name if self.field_name else self.parent.field_name
-        if getattr(root, 'included_serializers', None) is not None:
-            includes = get_included_serializers(root)
-            if field_name in includes.keys():
-                resource_type = get_resource_type_from_serializer(includes[field_name])
-
-        resource_type = resource_type if resource_type else get_resource_type_from_instance(value)
         return OrderedDict([('type', resource_type), ('id', str(pk))])
+
+    def get_resource_type_from_included_serializer(self):
+        """
+        Check to see it this resource has a different resource_name when
+        included and return that name, or None
+        """
+        field_name = self.field_name or self.parent.field_name
+        root = self.get_root_serializer()
+
+        if root is not None:
+            includes = get_included_serializers(root)
+            if field_name in includes:
+                return get_resource_type_from_serializer(includes[field_name])
+
+        return None
+
+    def get_root_serializer(self):
+        if hasattr(self.parent, 'parent') and self.is_serializer(self.parent.parent):
+            return self.parent.parent
+        elif self.is_serializer(self.parent):
+            return self.parent
+        return None
+
+    def is_serializer(self, candidate):
+        return hasattr(candidate, 'included_serializers')
 
     def get_choices(self, cutoff=None):
         queryset = self.get_queryset()
