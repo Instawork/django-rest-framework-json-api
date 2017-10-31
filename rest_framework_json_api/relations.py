@@ -5,6 +5,7 @@ from rest_framework.fields import MISSING_ERROR_MESSAGE, SerializerMethodField
 from rest_framework.relations import *
 from django.utils.translation import ugettext_lazy as _
 from django.db.models.query import QuerySet
+from django.db.models import Model
 
 from rest_framework_json_api.exceptions import Conflict
 from rest_framework_json_api.utils import Hyperlink, \
@@ -120,8 +121,9 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
             related_id = None
 
         if related_id:
+            if isinstance(related_id, Model):
+                related_id = related_id.pk
             related_kwargs = {self.related_link_url_kwarg: related_id}
-
             related_link = self.get_url('related', self.related_link_view_name, related_kwargs, request)
         else:
             related_link = None
