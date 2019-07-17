@@ -118,36 +118,45 @@ class JSONParser(parsers.JSONParser):
         request = parser_context.get('request')
 
         # Check for inconsistencies
-        if request.method in ('PUT', 'POST', 'PATCH'):
-            resource_name = utils.get_resource_name(
-                parser_context, expand_polymorphic_types=True)
-            if isinstance(resource_name, six.string_types):
-                if data.get('type') != resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "({resource_type}).".format(
-                            data_type=data.get('type'),
-                            resource_type=resource_name))
-            else:
-                if data.get('type') not in resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "(one of [{resource_types}]).".format(
-                            data_type=data.get('type'),
-                            resource_types=", ".join(resource_name)))
-        if not data.get('id') and request.method in ('PATCH', 'PUT'):
-            raise ParseError("The resource identifier object must contain an 'id' member")
+        parsed_data = []
+        if not isinstance(data, list):
+            data = [data]
+        for datum in data:
+            if request.method in ('PUT', 'POST', 'PATCH'):
+                resource_name = utils.get_resource_name(
+                    parser_context, expand_polymorphic_types=True)
 
-        # Construct the return data
-        serializer_class = getattr(view, 'serializer_class', None)
-        parsed_data = {'id': data.get('id')} if 'id' in data else {}
-        # `type` field needs to be allowed in none polymorphic serializers
-        if serializer_class is not None:
-            if issubclass(serializer_class, serializers.PolymorphicModelSerializer):
-                parsed_data['type'] = data.get('type')
-        parsed_data.update(self.parse_attributes(data))
-        parsed_data.update(self.parse_relationships(data))
-        parsed_data.update(self.parse_metadata(result))
+                if isinstance(resource_name, six.string_types):
+                    if datum.get('type') != resource_name:
+                        raise exceptions.Conflict(
+                            "The resource object's type ({datum_type}) is not the type that "
+                            "constitute the collection represented by the endpoint "
+                            "({resource_type}).".format(
+                                datum_type=datum.get('type'),
+                                resource_type=resource_name))
+                else:
+                    if datum.get('type') not in resource_name:
+                        raise exceptions.Conflict(
+                            "The resource object's type ({datum_type}) is not the type that "
+                            "constitute the collection represented by the endpoint "
+                            "(one of [{resource_types}]).".format(
+                                datum_type=datum.get('type'),
+                                resource_types=", ".join(resource_name)))
+            if not datum.get('id') and request.method in ('PATCH', 'PUT'):
+                raise ParseError("The resource identifier object must contain an 'id' member")
+
+            # Construct the return datum
+            serializer_class = getattr(view, 'serializer_class', None)
+            parsed_datum = {'id': datum.get('id')} if 'id' in datum else {}
+            # `type` field needs to be allowed in none polymorphic serializers
+            if serializer_class is not None:
+                if issubclass(serializer_class, serializers.PolymorphicModelSerializer):
+                    parsed_datum['type'] = datum.get('type')
+            parsed_datum.update(self.parse_attributes(datum))
+            parsed_datum.update(self.parse_relationships(datum))
+            parsed_datum.update(self.parse_metadata(result))
+            parsed_data.append(parsed_datum)
+
+        if len(parsed_data) == 1:
+            return parsed_data[0]
         return parsed_data
