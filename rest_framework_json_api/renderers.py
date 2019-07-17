@@ -154,7 +154,9 @@ class JSONRenderer(renderers.JSONRenderer):
 
             if isinstance(field, (ResourceRelatedField, )):
                 if not isinstance(field, SkipDataMixin):
-                    relation_data.update({'data': resource.get(field_name)})
+                    field_data = resource.get(field_name)
+                    if field_data:
+                        relation_data.update({'data': resource.get(field_name)})
 
                 data.update({field_name: relation_data})
                 continue
