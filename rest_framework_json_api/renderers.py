@@ -2,6 +2,8 @@
 Renderers
 """
 import copy
+import logging
+import time
 from collections import OrderedDict
 
 import inflection
@@ -14,6 +16,7 @@ from rest_framework.settings import api_settings
 
 from . import utils
 
+logger = logging.getLogger("instawork.json")
 
 class JSONRenderer(renderers.JSONRenderer):
     """
@@ -541,6 +544,11 @@ class JSONRenderer(renderers.JSONRenderer):
         if json_api_meta:
             render_data['meta'] = utils.format_keys(json_api_meta)
 
-        return super(JSONRenderer, self).render(
+        t1 = time.time()
+        result = super(JSONRenderer, self).render(
             render_data, accepted_media_type, renderer_context
         )
+        t2 = time.time()
+        logger.info("JSON rendered in {} seconds".format(t2 - t1))
+
+        return result

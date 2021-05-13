@@ -1,11 +1,14 @@
 """
 Parsers
 """
+import logging
+import time
 from rest_framework import parsers
 from rest_framework.exceptions import ParseError
 
 from . import utils, renderers, exceptions
 
+logger = logging.getLogger("instawork.json")
 
 class JSONParser(parsers.JSONParser):
     """
@@ -58,7 +61,10 @@ class JSONParser(parsers.JSONParser):
         """
         Parses the incoming bytestream as JSON and returns the resulting data
         """
+        t1 = time.time()
         result = super(JSONParser, self).parse(stream, media_type=media_type, parser_context=parser_context)
+        t2 = time.time()
+        logger.info("JSON parsed in {} seconds".format(t2 - t1))
 
         if not isinstance(result, dict) or 'data' not in result:
             raise ParseError('Received document does not contain primary data')
