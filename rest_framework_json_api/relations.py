@@ -23,10 +23,10 @@ from rest_framework_json_api.utils import (
 )
 
 LINKS_PARAMS = [
-    "self_link_view_name",
-    "related_link_view_name",
-    "related_link_lookup_field",
-    "related_link_url_kwarg",
+    'self_link_view_name',
+    'related_link_view_name',
+    'related_link_lookup_field',
+    'related_link_url_kwarg'
 ]
 
 
@@ -63,10 +63,10 @@ class HyperlinkedMixin(object):
             self.related_link_view_name = related_link_view_name
 
         self.related_link_lookup_field = kwargs.pop(
-            "related_link_lookup_field", self.related_link_lookup_field
+            'related_link_lookup_field', self.related_link_lookup_field
         )
         self.related_link_url_kwarg = kwargs.pop(
-            "related_link_url_kwarg", self.related_link_lookup_field
+            'related_link_url_kwarg', self.related_link_lookup_field
         )
         self.links_only = kwargs.pop("links_only", self.links_only)
 
@@ -149,9 +149,9 @@ class HyperlinkedMixin(object):
             related_link = None
 
         if self_link:
-            return_data.update({"self": self_link})
+            return_data.update({'self': self_link})
         if related_link:
-            return_data.update({"related": related_link})
+            return_data.update({'related': related_link})
         return return_data
 
 

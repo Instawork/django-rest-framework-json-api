@@ -91,11 +91,11 @@ class JSONParser(parsers.JSONParser):
             stream, media_type=media_type, parser_context=parser_context
         )
 
-        if not isinstance(result, dict) or "data" not in result:
-            raise ParseError("Received document does not contain primary data")
+        if not isinstance(result, dict) or 'data' not in result:
+            raise ParseError('Received document does not contain primary data')
 
-        data = result.get("data")
-        view = parser_context["view"]
+        data = result.get('data')
+        view = parser_context['view']
 
         from rest_framework_json_api.views import RelationshipView
 
@@ -105,12 +105,12 @@ class JSONParser(parsers.JSONParser):
             if isinstance(data, list):
                 for resource_identifier_object in data:
                     if not (
-                        resource_identifier_object.get("id")
-                        and resource_identifier_object.get("type")
+                        resource_identifier_object.get('id') and
+                        resource_identifier_object.get('type')
                     ):
                         raise ParseError(
-                            "Received data contains one or more malformed JSONAPI "
-                            "Resource Identifier Object(s)"
+                            'Received data contains one or more malformed JSONAPI '
+                            'Resource Identifier Object(s)'
                         )
             elif not (data.get("id") and data.get("type")):
                 raise ParseError(
