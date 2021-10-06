@@ -2,6 +2,7 @@ import json
 from collections import OrderedDict
 from collections.abc import Iterable
 
+import inflection
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import NoReverseMatch
 from rest_framework.fields import MISSING_ERROR_MESSAGE, SkipField
