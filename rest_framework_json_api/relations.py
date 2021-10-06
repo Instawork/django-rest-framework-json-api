@@ -109,9 +109,9 @@ class HyperlinkedMixin(object):
 
         return Hyperlink(url, name)
 
-    def get_links(self, obj=None, lookup_field="pk"):
-        request = self.context.get("request", None)
-        view = self.context.get("view", None)
+    def get_links(self, obj=None, lookup_field='pk'):
+        request = self.context.get('request', None)
+        view = self.context.get('view', None)
         return_data = OrderedDict()
 
         if obj:
@@ -187,7 +187,7 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
     _skip_polymorphic_optimization = True
     self_link_view_name = None
     related_link_view_name = None
-    related_link_lookup_field = "pk"
+    related_link_lookup_field = 'pk'
 
     default_error_messages = {
         'required': _('This field is required.'),
@@ -245,10 +245,10 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
             expected_relation_type = serializer_resource_type
 
         if 'type' not in data:
-            self.fail("missing_type")
+            self.fail('missing_type')
 
         if 'id' not in data:
-            self.fail("missing_id")
+            self.fail('missing_id')
 
         if data['type'] != expected_relation_type:
             self.conflict(
@@ -269,31 +269,37 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
             pk = value.pk
 
         resource_type = self.get_resource_type_from_included_serializer()
-        if resource_type is None:
+        if resource_type is None or not self._skip_polymorphic_optimization:
             resource_type = get_resource_type_from_instance(value)
 
-        return OrderedDict([("type", resource_type), ("id", str(pk))])
+        return OrderedDict([('type', resource_type), ('id', str(pk))])
 
     def get_resource_type_from_included_serializer(self):
         """
         Check to see it this resource has a different resource_name when
         included and return that name, or None
         """
-        field_name = self.field_name or self.parent.field_name
-        root = self.get_root_serializer()
+        parent = self.get_parent_serializer()
 
-        if root is not None:
-            includes = get_included_serializers(root)
-            if field_name in includes.keys():
-                return get_resource_type_from_serializer(includes[field_name])
+        if parent is not None:
+            # accept both singular and plural versions of field_name
+            field_names = [
+                inflection.singularize(field_name),
+                inflection.pluralize(field_name)
+            ]
+            includes = get_included_serializers(parent)
+            for field in field_names:
+                if field in includes.keys():
+                    return get_resource_type_from_serializer(includes[field])
 
         return None
 
-    def get_root_serializer(self):
-        if hasattr(self.parent, "parent") and self.is_serializer(self.parent.parent):
+    def get_parent_serializer(self):
+        if hasattr(self.parent, 'parent') and self.is_serializer(self.parent.parent):
             return self.parent.parent
         elif self.is_serializer(self.parent):
             return self.parent
+
         return None
 
     def is_serializer(self, candidate):

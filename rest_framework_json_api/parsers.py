@@ -1,14 +1,11 @@
 """
 Parsers
 """
-import logging
 from rest_framework import parsers
 from rest_framework.exceptions import ParseError
 
 from . import exceptions, renderers, utils
 from .settings import json_api_settings
-
-logger = logging.getLogger("instawork.json")
 
 class JSONParser(parsers.JSONParser):
     """
