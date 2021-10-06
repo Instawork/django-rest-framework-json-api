@@ -280,6 +280,7 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
         Check to see it this resource has a different resource_name when
         included and return that name, or None
         """
+        field_name = self.field_name or self.parent.field_name
         parent = self.get_parent_serializer()
 
         if parent is not None:
