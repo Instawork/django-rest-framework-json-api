@@ -190,24 +190,22 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
     related_link_lookup_field = "pk"
 
     default_error_messages = {
-        "required": _("This field is required."),
-        "does_not_exist": _('Invalid pk "{pk_value}" - object does not exist.'),
-        "incorrect_type": _(
-            "Incorrect type. Expected resource identifier object, received {data_type}."
+        'required': _('This field is required.'),
+        'does_not_exist': _('Invalid pk "{pk_value}" - object does not exist.'),
+        'incorrect_type': _(
+            'Incorrect type. Expected resource identifier object, received {data_type}.'
         ),
-        "incorrect_relation_type": _(
-            "Incorrect relation type. Expected {relation_type}, received {received_type}."
+        'incorrect_relation_type': _(
+            'Incorrect relation type. Expected {relation_type}, received {received_type}.'
         ),
-        "missing_type": _(
-            "Invalid resource identifier object: missing 'type' attribute"
-        ),
-        "missing_id": _("Invalid resource identifier object: missing 'id' attribute"),
-        "no_match": _("Invalid hyperlink - No URL match."),
+        'missing_type': _('Invalid resource identifier object: missing \'type\' attribute'),
+        'missing_id': _('Invalid resource identifier object: missing \'id\' attribute'),
+        'no_match': _('Invalid hyperlink - No URL match.'),
     }
 
     def __init__(self, **kwargs):
         # check for a model class that was passed in for the relation type
-        model = kwargs.pop("model", None)
+        model = kwargs.pop('model', None)
         if model:
             self.model = model
 
@@ -236,9 +234,9 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
                 data = json.loads(data)
             except ValueError:
                 # show a useful error if they send a `pk` instead of resource object
-                self.fail("incorrect_type", data_type=type(data).__name__)
+                self.fail('incorrect_type', data_type=type(data).__name__)
         if not isinstance(data, dict):
-            self.fail("incorrect_type", data_type=type(data).__name__)
+            self.fail('incorrect_type', data_type=type(data).__name__)
 
         expected_relation_type = get_resource_type_from_queryset(self.get_queryset())
         serializer_resource_type = self.get_resource_type_from_included_serializer()
@@ -246,20 +244,20 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
         if serializer_resource_type is not None:
             expected_relation_type = serializer_resource_type
 
-        if "type" not in data:
+        if 'type' not in data:
             self.fail("missing_type")
 
-        if "id" not in data:
+        if 'id' not in data:
             self.fail("missing_id")
 
-        if data["type"] != expected_relation_type:
+        if data['type'] != expected_relation_type:
             self.conflict(
-                "incorrect_relation_type",
+                'incorrect_relation_type',
                 relation_type=expected_relation_type,
-                received_type=data["type"],
+                received_type=data['type']
             )
 
-        return super(ResourceRelatedField, self).to_internal_value(data["id"])
+        return super(ResourceRelatedField, self).to_internal_value(data['id'])
 
     def to_representation(self, value):
         if self.links_only:
@@ -311,12 +309,13 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
         if cutoff is not None:
             queryset = queryset[:cutoff]
 
-        return OrderedDict(
-            [
-                (json.dumps(self.to_representation(item)), self.display_value(item))
-                for item in queryset
-            ]
-        )
+        return OrderedDict([
+            (
+                json.dumps(self.to_representation(item)),
+                self.display_value(item)
+            )
+            for item in queryset
+        ])
 
 
 class PolymorphicResourceRelatedField(ResourceRelatedField):
@@ -425,7 +424,5 @@ class SerializerMethodResourceRelatedField(ResourceRelatedField):
         )
 
 
-class SerializerMethodHyperlinkedRelatedField(
-    SkipDataMixin, SerializerMethodResourceRelatedField
-):
+class SerializerMethodHyperlinkedRelatedField(SkipDataMixin, SerializerMethodResourceRelatedField):
     pass

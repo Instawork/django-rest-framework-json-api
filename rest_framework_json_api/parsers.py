@@ -98,7 +98,6 @@ class JSONParser(parsers.JSONParser):
         view = parser_context['view']
 
         from rest_framework_json_api.views import RelationshipView
-
         if isinstance(view, RelationshipView):
             # We skip parsing the object as JSONAPI Resource Identifier Object and not a regular
             # Resource Object
@@ -112,14 +111,12 @@ class JSONParser(parsers.JSONParser):
                             'Received data contains one or more malformed JSONAPI '
                             'Resource Identifier Object(s)'
                         )
-            elif not (data.get("id") and data.get("type")):
-                raise ParseError(
-                    "Received data is not a valid JSONAPI Resource Identifier Object"
-                )
+            elif not (data.get('id') and data.get('type')):
+                raise ParseError('Received data is not a valid JSONAPI Resource Identifier Object')
 
             return data
 
-        request = parser_context.get("request")
+        request = parser_context.get('request')
 
         # Check for inconsistencies
         resource_name = utils.get_resource_name(parser_context)
