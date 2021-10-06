@@ -4,6 +4,7 @@ Renderers
 import copy
 from collections import OrderedDict, defaultdict
 from collections.abc import Iterable
+import logging
 
 import inflection
 from django.db.models import Manager
@@ -16,8 +17,9 @@ from rest_framework.settings import api_settings
 
 import rest_framework_json_api
 from rest_framework_json_api import utils
-from rest_framework_json_api.relations import HyperlinkedMixin, ResourceRelatedField, SkipDataMixin
+from rest_framework_json_api.relations import HyperlinkedMixin, SkipDataMixin
 
+logger = logging.getLogger("instawork.json")
 
 class JSONRenderer(renderers.JSONRenderer):
     """
@@ -110,7 +112,11 @@ class JSONRenderer(renderers.JSONRenderer):
                 continue
 
             source = field.source
-            relation_type = utils.get_related_resource_type(field)
+            # Pretty big hack, we don't actually care about the relation type in the case of ManyRelatedField
+            try:
+                relation_type = utils.get_related_resource_type(field)
+            except:
+                relation_type = None
 
             if isinstance(field, relations.HyperlinkedIdentityField):
                 resolved, relation_instance = utils.get_relation_instance(
@@ -151,7 +157,9 @@ class JSONRenderer(renderers.JSONRenderer):
 
             if isinstance(field, (ResourceRelatedField, )):
                 if not isinstance(field, SkipDataMixin):
-                    relation_data.update({'data': resource.get(field_name)})
+                    field_data = resource.get(field_name)
+                    if field_data or type(field_data) == list:
+                        relation_data['data'] = field_data
 
                 data.update({field_name: relation_data})
                 continue
@@ -318,6 +326,8 @@ class JSONRenderer(renderers.JSONRenderer):
         Adds related data to the top level included key when the request includes
         ?include=example,example_field2
         """
+        from rest_framework_json_api.relations import ResourceRelatedField, SerializerMethodResourceRelatedField
+
         # this function may be called with an empty record (example: Browsable Interface)
         if not resource_instance:
             return
@@ -350,6 +360,7 @@ class JSONRenderer(renderers.JSONRenderer):
             relation_instance = cls.extract_relation_instance(
                 field, resource_instance
             )
+
             if isinstance(relation_instance, Manager):
                 relation_instance = relation_instance.all()
 
@@ -653,6 +664,8 @@ class JSONRenderer(renderers.JSONRenderer):
         if json_api_meta:
             render_data['meta'] = utils.format_field_names(json_api_meta)
 
-        return super(JSONRenderer, self).render(
+        result = super(JSONRenderer, self).render(
             render_data, accepted_media_type, renderer_context
         )
+
+        return result

@@ -1,12 +1,14 @@
 """
 Parsers
 """
+import logging
 from rest_framework import parsers
 from rest_framework.exceptions import ParseError
 
-from . import exceptions, renderers, serializers, utils
+from . import exceptions, renderers, utils
 from .settings import json_api_settings
 
+logger = logging.getLogger("instawork.json")
 
 class JSONParser(parsers.JSONParser):
     """
@@ -89,79 +91,65 @@ class JSONParser(parsers.JSONParser):
             stream, media_type=media_type, parser_context=parser_context
         )
 
-        if not isinstance(result, dict) or 'data' not in result:
-            raise ParseError('Received document does not contain primary data')
+        if not isinstance(result, dict) or "data" not in result:
+            raise ParseError("Received document does not contain primary data")
 
-        data = result.get('data')
-        view = parser_context['view']
+        data = result.get("data")
+        view = parser_context["view"]
 
         from rest_framework_json_api.views import RelationshipView
+
         if isinstance(view, RelationshipView):
             # We skip parsing the object as JSONAPI Resource Identifier Object and not a regular
             # Resource Object
             if isinstance(data, list):
                 for resource_identifier_object in data:
                     if not (
-                        resource_identifier_object.get('id') and
-                        resource_identifier_object.get('type')
+                        resource_identifier_object.get("id")
+                        and resource_identifier_object.get("type")
                     ):
                         raise ParseError(
-                            'Received data contains one or more malformed JSONAPI '
-                            'Resource Identifier Object(s)'
+                            "Received data contains one or more malformed JSONAPI "
+                            "Resource Identifier Object(s)"
                         )
-            elif not (data.get('id') and data.get('type')):
-                raise ParseError('Received data is not a valid JSONAPI Resource Identifier Object')
+            elif not (data.get("id") and data.get("type")):
+                raise ParseError(
+                    "Received data is not a valid JSONAPI Resource Identifier Object"
+                )
 
             return data
 
-        request = parser_context.get('request')
-
-        # Sanity check
-        if not isinstance(data, dict):
-            raise ParseError('Received data is not a valid JSONAPI Resource Identifier Object')
+        request = parser_context.get("request")
 
         # Check for inconsistencies
-        if request.method in ('PUT', 'POST', 'PATCH'):
-            resource_name = utils.get_resource_name(
-                parser_context, expand_polymorphic_types=True)
-            if isinstance(resource_name, str):
-                if data.get('type') != resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "({resource_type}).".format(
-                            data_type=data.get('type'),
-                            resource_type=resource_name))
-            else:
-                if data.get('type') not in resource_name:
-                    raise exceptions.Conflict(
-                        "The resource object's type ({data_type}) is not the type that "
-                        "constitute the collection represented by the endpoint "
-                        "(one of [{resource_types}]).".format(
-                            data_type=data.get('type'),
-                            resource_types=", ".join(resource_name)))
-        if not data.get('id') and request.method in ('PATCH', 'PUT'):
-            raise ParseError("The resource identifier object must contain an 'id' member")
-
-        if request.method in ('PATCH', 'PUT'):
-            lookup_url_kwarg = view.lookup_url_kwarg or view.lookup_field
-            if str(data.get('id')) != str(view.kwargs[lookup_url_kwarg]):
+        resource_name = utils.get_resource_name(parser_context)
+        parsed_data = []
+        if not isinstance(data, list):
+            data = [data]
+        for datum in data:
+            if datum.get("type") != resource_name and request.method in (
+                "PUT",
+                "POST",
+                "PATCH",
+            ):
                 raise exceptions.Conflict(
-                    "The resource object's id ({data_id}) does not match url's "
-                    "lookup id ({url_id})".format(
-                        data_id=data.get('id'),
-                        url_id=view.kwargs[view.lookup_field]
+                    "The resource object's type ({data_type}) is not the type "
+                    "that constitute the collection represented by the endpoint ({resource_type}).".format(
+                        data_type=datum.get("type"), resource_type=resource_name
                     )
                 )
+            if not datum.get("id") and request.method in ("PATCH", "PUT"):
+                raise ParseError(
+                    "The resource identifier object must contain an 'id' member"
+                )
 
-        # Construct the return data
-        serializer_class = getattr(view, 'serializer_class', None)
-        parsed_data = {'id': data.get('id')} if 'id' in data else {}
-        # `type` field needs to be allowed in none polymorphic serializers
-        if serializer_class is not None:
-            if issubclass(serializer_class, serializers.PolymorphicModelSerializer):
-                parsed_data['type'] = data.get('type')
-        parsed_data.update(self.parse_attributes(data))
-        parsed_data.update(self.parse_relationships(data))
-        parsed_data.update(self.parse_metadata(result))
+            # Construct the return data
+            parsed_datum = {"id": datum.get("id")} if "id" in datum else {}
+            parsed_datum.update(self.parse_attributes(datum))
+            parsed_datum.update(self.parse_relationships(datum))
+            parsed_datum.update(self.parse_metadata(result))
+            parsed_data.append(parsed_datum)
+
+        if len(parsed_data) == 1:
+            return parsed_data[0]
         return parsed_data
