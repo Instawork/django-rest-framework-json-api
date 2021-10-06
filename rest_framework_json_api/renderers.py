@@ -323,7 +323,6 @@ class JSONRenderer(renderers.JSONRenderer):
         Adds related data to the top level included key when the request includes
         ?include=example,example_field2
         """
-
         # this function may be called with an empty record (example: Browsable Interface)
         if not resource_instance:
             return
