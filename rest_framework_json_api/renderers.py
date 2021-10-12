@@ -18,7 +18,6 @@ import rest_framework_json_api
 from rest_framework_json_api import utils
 from rest_framework_json_api.relations import HyperlinkedMixin, ResourceRelatedField, SkipDataMixin
 
-
 class JSONRenderer(renderers.JSONRenderer):
     """
     The `JSONRenderer` exposes a number of methods that you may override if you need highly
@@ -110,7 +109,11 @@ class JSONRenderer(renderers.JSONRenderer):
                 continue
 
             source = field.source
-            relation_type = utils.get_related_resource_type(field)
+            # Pretty big hack, we don't actually care about the relation type in the case of ManyRelatedField
+            try:
+                relation_type = utils.get_related_resource_type(field)
+            except:
+                relation_type = None
 
             if isinstance(field, relations.HyperlinkedIdentityField):
                 resolved, relation_instance = utils.get_relation_instance(
@@ -151,7 +154,9 @@ class JSONRenderer(renderers.JSONRenderer):
 
             if isinstance(field, (ResourceRelatedField, )):
                 if not isinstance(field, SkipDataMixin):
-                    relation_data.update({'data': resource.get(field_name)})
+                    field_data = resource.get(field_name)
+                    if field_data or type(field_data) == list:
+                        relation_data['data'] = field_data
 
                 data.update({field_name: relation_data})
                 continue

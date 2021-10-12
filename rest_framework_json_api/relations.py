@@ -5,13 +5,14 @@ from collections.abc import Iterable
 import inflection
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import NoReverseMatch
-from django.utils.translation import gettext_lazy as _
 from rest_framework.fields import MISSING_ERROR_MESSAGE, SkipField
 from rest_framework.relations import MANY_RELATION_KWARGS
 from rest_framework.relations import ManyRelatedField as DRFManyRelatedField
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from rest_framework.reverse import reverse
-from rest_framework.serializers import Serializer
+
+from django.utils.translation import ugettext_lazy as _
+from django.db.models import Model
 
 from rest_framework_json_api.exceptions import Conflict
 from rest_framework_json_api.utils import (
@@ -19,7 +20,7 @@ from rest_framework_json_api.utils import (
     get_included_serializers,
     get_resource_type_from_instance,
     get_resource_type_from_queryset,
-    get_resource_type_from_serializer
+    get_resource_type_from_serializer,
 )
 
 LINKS_PARAMS = [
@@ -54,6 +55,7 @@ class HyperlinkedMixin(object):
     self_link_view_name = None
     related_link_view_name = None
     related_link_lookup_field = 'pk'
+    links_only = False
 
     def __init__(self, self_link_view_name=None, related_link_view_name=None, **kwargs):
         if self_link_view_name is not None:
@@ -67,6 +69,12 @@ class HyperlinkedMixin(object):
         self.related_link_url_kwarg = kwargs.pop(
             'related_link_url_kwarg', self.related_link_lookup_field
         )
+        self.links_only = kwargs.pop("links_only", self.links_only)
+
+        # check for a model class that was passed in for the relation type
+        model = kwargs.pop("model", None)
+        if model:
+            self.model = model
 
         # We include this simply for dependency injection in tests.
         # We can't add it as a class attributes or it would expect an
@@ -107,26 +115,39 @@ class HyperlinkedMixin(object):
         view = self.context.get('view', None)
         return_data = OrderedDict()
 
-        kwargs = {lookup_field: getattr(obj, lookup_field) if obj else view.kwargs[lookup_field]}
+        if obj:
+            kwargs = {lookup_field: getattr(obj, lookup_field)}
+        elif lookup_field in view.kwargs:
+            kwargs = {lookup_field: view.kwargs[lookup_field]}
+        else:
+            kwargs = {}
 
         self_kwargs = kwargs.copy()
-        self_kwargs.update({
-            'related_field': self.field_name if self.field_name else self.parent.field_name
-        })
-        self_link = self.get_url('self', self.self_link_view_name, self_kwargs, request)
+        self_kwargs.update(
+            {
+                "related_field": self.field_name
+                if self.field_name
+                else self.parent.field_name
+            }
+        )
+        self_link = self.get_url("self", self.self_link_view_name, self_kwargs, request)
 
-        # Assuming RelatedField will be declared in two ways:
-        # 1. url(r'^authors/(?P<pk>[^/.]+)/(?P<related_field>\w+)/$',
-        #         AuthorViewSet.as_view({'get': 'retrieve_related'}))
-        # 2. url(r'^authors/(?P<author_pk>[^/.]+)/bio/$',
-        #         AuthorBioViewSet.as_view({'get': 'retrieve'}))
-        # So, if related_link_url_kwarg == 'pk' it will add 'related_field' parameter to reverse()
-        if self.related_link_url_kwarg == 'pk':
-            related_kwargs = self_kwargs
+        if obj:
+            related_id = getattr(obj, self.related_link_lookup_field or "pk")
+        elif self.related_link_lookup_field in view.kwargs:
+            related_id = view.kwargs[self.related_link_lookup_field]
         else:
-            related_kwargs = {self.related_link_url_kwarg: kwargs[self.related_link_lookup_field]}
+            related_id = None
 
-        related_link = self.get_url('related', self.related_link_view_name, related_kwargs, request)
+        if related_id:
+            if isinstance(related_id, Model):
+                related_id = related_id.pk
+            related_kwargs = {self.related_link_url_kwarg: related_id}
+            related_link = self.get_url(
+                "related", self.related_link_view_name, related_kwargs, request
+            )
+        else:
+            related_link = None
 
         if self_link:
             return_data.update({'self': self_link})
@@ -240,7 +261,10 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
         return super(ResourceRelatedField, self).to_internal_value(data['id'])
 
     def to_representation(self, value):
-        if getattr(self, 'pk_field', None) is not None:
+        if self.links_only:
+            return None
+
+        if getattr(self, "pk_field", None) is not None:
             pk = self.pk_field.to_representation(value.pk)
         else:
             pk = value.pk
@@ -281,7 +305,7 @@ class ResourceRelatedField(HyperlinkedMixin, PrimaryKeyRelatedField):
         return None
 
     def is_serializer(self, candidate):
-        return isinstance(candidate, Serializer)
+        return hasattr(candidate, "included_serializers")
 
     def get_choices(self, cutoff=None):
         queryset = self.get_queryset()
@@ -391,6 +415,21 @@ class SerializerMethodResourceRelatedField(ResourceRelatedField):
             base = super(SerializerMethodResourceRelatedField, self)
             return [base.to_representation(x) for x in value]
         return super(SerializerMethodResourceRelatedField, self).to_representation(value)
+
+    def get_links(self, obj=None, lookup_field="pk"):
+        if hasattr(self, "child_relation") and getattr(self, "child_relation"):
+            return super(SerializerMethodResourceRelatedField, self).get_links(
+                obj, lookup_field
+            )
+
+        if self.source and hasattr(self.parent, self.source):
+            serializer_method = getattr(self.parent, self.source)
+            if hasattr(serializer_method, "__call__"):
+                obj = serializer_method(obj)
+
+        return super(SerializerMethodResourceRelatedField, self).get_links(
+            obj, lookup_field
+        )
 
 
 class SerializerMethodHyperlinkedRelatedField(SkipDataMixin, SerializerMethodResourceRelatedField):
