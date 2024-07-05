@@ -11,7 +11,7 @@ from rest_framework.relations import ManyRelatedField as DRFManyRelatedField
 from rest_framework.relations import PrimaryKeyRelatedField, RelatedField
 from rest_framework.reverse import reverse
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Model
 
 from rest_framework_json_api.exceptions import Conflict

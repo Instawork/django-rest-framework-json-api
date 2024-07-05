@@ -21,7 +21,6 @@ class JSONAPIMetadata(SimpleMetadata):
         serializers.Field: 'GenericField',
         serializers.RelatedField: 'Relationship',
         serializers.BooleanField: 'Boolean',
-        serializers.NullBooleanField: 'Boolean',
         serializers.CharField: 'String',
         serializers.URLField: 'URL',
         serializers.EmailField: 'Email',

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import inflection
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query import QuerySet
